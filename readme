@@ -1,0 +1,177 @@
+- tx_generators
+Contiene los scripts en bash que generan los archivos fuente de tx en formato ascii
+
+	. gen_barker13_pulsado.sh:
+		Genera la secuencia de muestras correspondientes a una señal codificada en Barker 13 y pulsada.
+		
+		Ejecución:
+			$./gen_barker13_pulsado.sh xxx yyy
+		
+		Requiere 2 parámetros: el número de muestras por código ('xxx') y el número de muestras en estado apagado ('yyy')
+
+        . gen_barker13_pulsado_shifted.sh:
+		Genera la secuencia de muestras correspondientes a una señal codificada en Barker 13 y pulsada.
+		Pero, desplazada un número fijo de muestras
+
+		Ejecución:
+			$./gen_barker13_pulsado_shifted.sh xxx yyy zzz
+		
+		Requiere 3 parámetros: el número de muestras por código ('xxx'), el número de muestras en estado apagado ('yyy')
+					y el número de muestras a desplazar ('zzz')
+         
+         - others
+	 Contiene scripts que generan otras señales (usadas solo para pruebas iniciales)
+
+		 . gen_pulso.sh:		 
+			Genera un señal cuadrada.
+			
+			Ejecución:
+				$./gen_pulso.sh xxx yyy
+			
+			Requiere 2 parámetros: el número de muestras en alta ('xxx') y el número de muestras en baja ('yyy')
+
+		. gen_barker13.sh:		 
+			Genera las muestras correspondientes a la secuencia Barker 13 (no es pulsado).
+			
+			Ejecución:
+				$./gen_barker13.sh xxx
+			
+			Requiere 1 parámetro: el número de muestras por código ('xxx')
+		
+
+- bin_files 
+Carpeta que guarda archivos fuente (usados en GNU Radio Companion y en las aplicaciones de Python)
+	- rx
+	Se tienen las muestras de lo recibido (al realimentar tx con rx, cortocircuitando OUT1 con IN1)
+	
+	formato de las carpetas: 'fxxx_syyy' -> 'xxx' indica la frecuencia de la RF y 'yyy' indica la tasa de muestreo
+
+	- tx
+	Se tienen las muestras de tx en ascii (generados por los scripts) y en complejo (usando tx_complex_write.grc)
+	
+        formato de las carpetas: "fxxx_syyy" -> 'xxx' indica la frecuencia de la RF y 'yyy' indica la tasa de muestreo
+
+	formato de archivos (en carpeta ascii): "....(spsxxx_soffyyy_nrepzzz_shftppp)" -> 
+		'xxx' indica el número de muestras por símbolo (o código)
+                'yyy' indica el número de muestras en estado apagado (cero)
+		'zzz' indica el número de repeticiones
+                'ppp' indica el número de muestras que se ha desplazado
+
+- grc_files
+Carpeta que guarda archivos de GNU Radio Companion
+
+        - red_pitaya_blocks:
+		Contiene los archivos que instancian los bloques 'Red Pitaya Source' y 'Red Pitaya Sink'.
+		
+		Para ejecutar demás archivos .grc tipear lo siguiente en el términal:
+			$export GRC_BLOCKS_PATH=./red_pitaya_blocks/
+                        $gnuradio-companion xxxx.grc
+
+		(En 'xxxx' va el nombre del archivo .grc que se quiere abrir)
+		
+	. prueba_trx_am.grc: 
+		Hace una mod/demod AM enviando un tono (cortocircuitando tx con rx, OUT1 con IN1), el cual se puede escuchar con un audífono.
+		Sirve para verificar el funcionamiento de la aplicación 'SDR Transceiver'
+
+        . prueba_trx_barker13_pulsado.grc:
+		Envía la señal codificada con Barker 13 y pulsada, y la recibe (cortocircuitando tx con rx, OUT1 con IN1).
+		Se compara la señal enviada con la recibida a través del Time Sink de GNU Radio.
+
+		(Se agrega otro bloque Red Pitaya Sink que corresponde a OUT2 para observar la señal en el osciloscopio)
+	
+	. prueba_trx_realtime.grc:
+		Envía la señal codificada con Barker 13 y pulsada, y la recibe (cortocircuitando tx con rx, OUT1 con IN1).
+		Adicionalmente, envía las muestras de Rx por TCP a una aplicación Python (./python_apps/prueba_rangeDoppler_realtime.py)
+		
+		(Se debe ejecutar primero la aplicación Python, y luego el archivo .grc; debido a que este último está como cliente)
+
+        . prueba_trx_realtime_multitarget.grc:
+		Envía la señal codificada con Barker 13 y pulsada, y la recibe (cortocircuitando tx con rx, OUT1 con IN1).
+		Envía las muestras de Rx por TCP a una aplicación Python (./python_apps/prueba_rangeDoppler_realtime.py)
+
+		Además, simula varios objetivos ubicados en diferentes distancias en la cadena de Rx.
+
+		(Se debe ejecutar primero la aplicación Python, y luego el archivo .grc; debido a que este último está como cliente)
+
+        . tx_complex_write.grc:
+		Sirve para obtener muestras complejas a partir de la repetición de un archivo ascii (ubicado en bin_files/tx/ascii/).
+		Estas muestras complejas generadas con este archivo se trasladaron a la carpeta bin_files/tx/complex/  
+		
+	NOTA:
+	Todos los archivos .grc que tengan alguno de los bloques Red Pitaya Sink o Red Pitaya Source 
+	se deben ejecutar luego de realizar los siguientes pasos:
+	
+		1. Encender la Red Pitaya, esperar que se prendan LED's de status
+                2. Acceder a la IP de la Red Pitaya mediante el navegador (en la SD que tiene actualmente está con 10.10.50.132)
+		3. Acceder a la app 'SDR Transceiver' ubicada en la tienda (baazar) y dejarlo abierto mientras se ejecuten los archivos .grc
+
+- python_apps
+Contiene las aplicaciones en Python
+
+	. prueba_rangeDoppler.py:
+		Muestra gráficas de rango-velocidad (range-Doppler) basado en un archivo binario que tenga las muestras de Rx.
+		Es la versión offline.
+		
+		En la lectura de los archivos Rx y Tx, se debe colocar la ruta de los archivos fuente que están en bin_files/
+		(Solo se deben ingresar muestras complejas tanto de Tx como Tx)
+
+		Los parámetros tales como el número de muestras por símbolo, número de muestras en estado apagado, frecuencia de la RF,
+		tasa de muestreo, etc. deben estar en concordancia en los 3 archivos involucrados:
+		
+                  archivo fuente, archivo .grc (GNU Radio Companion) y el archivo .py (app de Python, editar parámetros en el código)
+		
+		Si se requiere guardar las gráficas descomentar la siguiente línea (número 166): 
+		#plt.savefig("fig" + str(i) + ".png")
+
+	. prueba_rangeDoppler_realtime.py:
+		Muestra gráficas de rango-velocidad (range-Doppler) en tiempo real mientras se ejecuta un archivo .grc
+		 (prueba_trx_realtime.grc o prueba_trx_realtime_multitarget.gr)
+		Es la versión online.
+		
+		En la lectura del archivo de Tx, se debe colocar la ruta del archivo fuente que se va a emplear (en ./bin_files/).
+
+		Los parámetros tales como el número de muestras por símbolo, número de muestras en estado apagado, frecuencia de la RF,
+		tasa de muestreo, etc. deben estar en concordancia en los 3 archivos involucrados:
+		
+                  archivo fuente, archivo .grc (GNU Radio Companion) y el archivo .py (app de Python, editar parámetros en el código)
+		
+		(Se debe ejecutar antes que el archivo .grc; debido a que está como servidor TCP)
+
+- vhdl_cores_vivado
+Contiene los códigos vhdl correspondientes a los bloques personalizados usados en Vivado
+
+	- Pruebas Tx Barker 13 Pulsado
+	Contiene los códigos vhdl para la generación de una señal RF codificada en Barker 13 y pulsada.
+
+		- Barker13 Pulsado AXI4Stream 
+		Contiene el bloque vhdl propiamente dicho y su wrapper (para adaptarlo a AXI4-Stream)
+		(no funciona al usarlo en el Block Design de Vivado, falta probarlo)
+		
+		- Codificacion Barker 13 Pulsado 
+		Contiene el codigo VHDL del circuito y el código VHDL de su testbench
+		(Independientemente sí funciona, probado con el testbench)
+
+	- RF Pulsado
+	Contiene los códigos vhdl para la generación de una señal RF pulsada.
+	(Funciona con ciertos valores del módulo de los contadores)
+	(No funciona con valores bajos de los módulos de los contadores)
+	
+		- HabilitadorRF
+		Contiene el código vhdl del bloque que resetea (habilita/deshabilita) el registro AXIStream
+
+		- Registro AXIStream
+		Contiene el código vhdl de un registro adaptado al protocolo AXIStream
+	
+	Notas sobre Vivado:
+	1. Para generar el marco de trabajo para la Red Pitaya (pines, instancia de bloques dac/adc, etc.)
+	   y sobre el uso de Vivado en general:
+		Seguir el siguiente tutorial: http://antonpotocnik.com/?p=487360
+		
+	2. Para crear IP cores personalizados para instanciarlos en el Block Design:
+		Seguir el siguiente tutorial: http://que.no/index.php/2016/03/30/creating-axi4-stream-ip-xilinx-vivado/
+		(en la parte que dice "Import your IP for use in Vivado IP Integrator")
+
+
+SI EL TEXTO NO ESTA INDENTADO, CHEQUEAR readme_imagenes
+
+	
